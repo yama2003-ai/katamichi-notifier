@@ -10,8 +10,6 @@ LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_TOKEN")
 USER_ID = os.environ.get("LINE_USER_ID")
 TARGET_URL = "https://cp.toyota.jp/rentacar/?padid=ag270_fr_sptop_onewayma"
 
-notified_plans = set()
-
 
 def send_line_notification(message):
   url = "https://api.line.me/v2/bot/message/push"
@@ -32,7 +30,6 @@ def send_line_notification(message):
 
 
 def check_katamichi_go():
-  global notified_plans
   try:
     headers = {
         "User-Agent": (
@@ -45,38 +42,40 @@ def check_katamichi_go():
     soup = BeautifulSoup(response.text, "html.parser")
 
     # --------------------------------------------------
-    # 掲載されている空きプラン（台数）をカウント
+    # 掲載されているプラン（カード）と区間情報を取得
     # --------------------------------------------------
     plan_cards = soup.select(".c-card") or soup.select(".plan-item")
     plan_count = len(plan_cards)
 
-    page_text = soup.get_text()
-    current_content_hash = hash(page_text)
+    plans_detail = []
+    if plan_cards:
+      for i, card in enumerate(plan_cards, 1):
+        # カード内のテキストから余分な空白を省いて取得
+        card_text = " ".join(card.get_text().split())
+        plans_detail.append(f"【プラン {i}】\n{card_text}")
 
-    # 初回実行時：ハッシュを記憶
-    if len(notified_plans) == 0:
-      notified_plans.add(current_content_hash)
-      print(f"初期状態を記憶しました。（現在の空き台数: {plan_count}台）")
-      return
+    detail_text = (
+        "\n\n".join(plans_detail)
+        if plans_detail
+        : "詳細なテキストの取得ができませんでしたが、プランが掲載されています。"
+    )
 
-    # 内容の更新を検知した場合
-    if current_content_hash not in notified_plans:
-      if plan_count > 0:
-        count_info = f"🚗 現在の空き台数: {plan_count}台"
-      else:
-        count_info = "🚗 空きプランあり（詳細はサイトをご確認ください）"
+    print(f"現在の空き台数: {plan_count}台")
 
+    # --------------------------------------------------
+    # 空きプランがある場合、区間や詳細を載せて通知
+    # --------------------------------------------------
+    if plan_count > 0:
       message = (
-          f"【片道GO！更新通知】\n\n"
-          f"新しいプランの追加・更新を検知しました！\n"
-          f"{count_info}\n\n"
+          f"🚗【片道GO！空きプラン通知】\n\n"
+          f"現在の空き台数: {plan_count}台\n\n"
+          f"{detail_text}\n\n"
           f"確認URL:\n{TARGET_URL}"
       )
       send_line_notification(message)
-      notified_plans.add(current_content_hash)
-      print("更新を検知して通知を送信しました。")
+      print("空きプランの区間情報を通知しました。")
     else:
-      print("新しい更新はありませんでした。")
+      print("現在、空きプランはありません（通知なし）。")
 
   except Exception as e:
     print(f"エラーが発生しました: {e}")
