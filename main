@@ -6,8 +6,8 @@ import requests
 # --------------------------------------------------
 # 変更点：GitHub Secretsから安全に読み込む
 # --------------------------------------------------
-LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("qUSdyHkX5BMaefb4296sT2g6UGcTBV7244Q7DCKRRV9qCjdpaRlnbWQMuyLx0Lhv847SXUmz2r4c3azJqtYmLMf0V2yzr/xl1IoD8s7vQ7tmwGPMW97DpCMwQ4w1Lpnq7R7laBTeF7Fo08RlOM2dTQdB04t89/1O/w1cDnyilFU=")
-USER_ID = os.environ.get("2012250007")
+LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_TOKEN")
+USER_ID = os.environ.get("LINE_USER_ID")
 TARGET_URL = "https://cp.toyota.jp/rentacar/?padid=ag270_fr_sptop_onewayma"
 
 TARGET_PREFS = ["東京都", "神奈川県", "千葉県"]
