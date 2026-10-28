@@ -50,15 +50,16 @@ def check_katamichi_go():
     plans_detail = []
     if plan_cards:
       for i, card in enumerate(plan_cards, 1):
-        # カード内のテキストから余分な空白を省いて取得
         card_text = " ".join(card.get_text().split())
         plans_detail.append(f"【プラン {i}】\n{card_text}")
 
-    detail_text = (
-        "\n\n".join(plans_detail)
-        if plans_detail
-        : "詳細なテキストの取得ができませんでしたが、プランが掲載されています。"
-    )
+    # 安全なif文でテキストを結合
+    if plans_detail:
+      detail_text = "\n\n".join(plans_detail)
+    else:
+      detail_text = (
+          "詳細なテキストの取得ができませんでしたが、プランが掲載されています。"
+      )
 
     print(f"現在の空き台数: {plan_count}台")
 
