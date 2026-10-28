@@ -1,32 +1,34 @@
 import os
-import time
+import smtplib
+from email.header import Header
+from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
 import requests
 
 # --------------------------------------------------
 # 設定
 # --------------------------------------------------
-LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_TOKEN")
-USER_ID = os.environ.get("LINE_USER_ID")
+MAIL_USER = os.environ.get("MAIL_USER")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+MAIL_TO = os.environ.get("MAIL_TO")
 TARGET_URL = "https://cp.toyota.jp/rentacar/?padid=ag270_fr_sptop_onewayma"
 
 
-def send_line_notification(message):
-  url = "https://api.line.me/v2/bot/message/push"
-  headers = {
-      "Content-Type": "application/json",
-      "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
-  }
-  payload = {
-      "to": USER_ID,
-      "messages": [{"type": "text", "text": message}],
-  }
+def send_email_notification(subject, message):
   try:
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
-    print("LINE通知を送信しました。")
-  except requests.exceptions.RequestException as e:
-    print(f"LINE通知の送信に失敗しました: {e}")
+    msg = MIMEText(message, "plain", "utf-8")
+    msg["Subject"] = Header(subject, "utf-8")
+    msg["From"] = MAIL_USER
+    msg["To"] = MAIL_TO
+
+    # GmailのSMTPサーバー経由で送信
+    server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+    server.login(MAIL_USER, MAIL_PASSWORD)
+    server.sendmail(MAIL_USER, [MAIL_TO], msg.as_string())
+    server.quit()
+    print("メール通知を送信しました。")
+  except Exception as e:
+    print(f"メール通知の送信に失敗しました: {e}")
 
 
 def check_katamichi_go():
@@ -53,7 +55,6 @@ def check_katamichi_go():
         card_text = " ".join(card.get_text().split())
         plans_detail.append(f"【プラン {i}】\n{card_text}")
 
-    # 安全なif文でテキストを結合
     if plans_detail:
       detail_text = "\n\n".join(plans_detail)
     else:
@@ -64,17 +65,18 @@ def check_katamichi_go():
     print(f"現在の空き台数: {plan_count}台")
 
     # --------------------------------------------------
-    # 空きプランがある場合、区間や詳細を載せて通知
+    # 空きプランがある場合、メールで通知
     # --------------------------------------------------
     if plan_count > 0:
+      subject = f"【片道GO！】空きプラン検知（現在 {plan_count}台）"
       message = (
-          f"🚗【片道GO！空きプラン通知】\n\n"
+          f"片道GO！に空きプランが掲載されています。\n\n"
           f"現在の空き台数: {plan_count}台\n\n"
           f"{detail_text}\n\n"
           f"確認URL:\n{TARGET_URL}"
       )
-      send_line_notification(message)
-      print("空きプランの区間情報を通知しました。")
+      send_email_notification(subject, message)
+      print("空きプランのメール通知を送信しました。")
     else:
       print("現在、空きプランはありません（通知なし）。")
 
