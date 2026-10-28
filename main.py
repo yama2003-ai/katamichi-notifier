@@ -47,7 +47,6 @@ def check_katamichi_go():
     # --------------------------------------------------
     # 掲載されている空きプラン（台数）をカウント
     # --------------------------------------------------
-    # 片道GO!のプラン要素（カード）を取得（サイト構造に合わせて抽出）
     plan_cards = soup.select(".c-card") or soup.select(".plan-item")
     plan_count = len(plan_cards)
 
@@ -62,11 +61,10 @@ def check_katamichi_go():
 
     # 内容の更新を検知した場合
     if current_content_hash not in notified_plans:
-      count_info = (
-          f"🚗 現在の空き台数: {plan_count}台"
-          if plan_count > 0
-          : "🚗 空きプランあり（詳細はサイトをご確認ください）"
-      )
+      if plan_count > 0:
+        count_info = f"🚗 現在の空き台数: {plan_count}台"
+      else:
+        count_info = "🚗 空きプランあり（詳細はサイトをご確認ください）"
 
       message = (
           f"【片道GO！更新通知】\n\n"
