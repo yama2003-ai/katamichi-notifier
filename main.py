@@ -4,13 +4,12 @@ from bs4 import BeautifulSoup
 import requests
 
 # --------------------------------------------------
-# 変更点：GitHub Secretsから安全に読み込む
+# 設定
 # --------------------------------------------------
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_TOKEN")
 USER_ID = os.environ.get("LINE_USER_ID")
 TARGET_URL = "https://cp.toyota.jp/rentacar/?padid=ag270_fr_sptop_onewayma"
 
-TARGET_PREFS = ["東京都", "神奈川県", "千葉県"]
 notified_plans = set()
 
 
@@ -44,29 +43,46 @@ def check_katamichi_go():
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
+
+    # --------------------------------------------------
+    # 掲載されている空きプラン（台数）をカウント
+    # --------------------------------------------------
+    # 片道GO!のプラン要素（カード）を取得（サイト構造に合わせて抽出）
+    plan_cards = soup.select(".c-card") or soup.select(".plan-item")
+    plan_count = len(plan_cards)
+
     page_text = soup.get_text()
+    current_content_hash = hash(page_text)
 
-    found_prefs = [pref for pref in TARGET_PREFS if pref in page_text]
+    # 初回実行時：ハッシュを記憶
+    if len(notified_plans) == 0:
+      notified_plans.add(current_content_hash)
+      print(f"初期状態を記憶しました。（現在の空き台数: {plan_count}台）")
+      return
 
-    if found_prefs:
-      current_content_hash = hash(page_text)
-      if current_content_hash not in notified_plans:
-        if len(notified_plans) > 0:
-          message = (
-              f"【片道GO！更新通知】\n\n"
-              f"東京都・神奈川県・千葉県に関連するプランの更新を検知しました！\n\n"
-              f"確認URL:\n{TARGET_URL}"
-          )
-          send_line_notification(message)
-        notified_plans.add(current_content_hash)
-        print("更新を検知しました。")
+    # 内容の更新を検知した場合
+    if current_content_hash not in notified_plans:
+      count_info = (
+          f"🚗 現在の空き台数: {plan_count}台"
+          if plan_count > 0
+          : "🚗 空きプランあり（詳細はサイトをご確認ください）"
+      )
+
+      message = (
+          f"【片道GO！更新通知】\n\n"
+          f"新しいプランの追加・更新を検知しました！\n"
+          f"{count_info}\n\n"
+          f"確認URL:\n{TARGET_URL}"
+      )
+      send_line_notification(message)
+      notified_plans.add(current_content_hash)
+      print("更新を検知して通知を送信しました。")
     else:
-      print("条件に合うエリアのプランは見つかりませんでした。")
+      print("新しい更新はありませんでした。")
 
   except Exception as e:
     print(f"エラーが発生しました: {e}")
 
 
 if __name__ == "__main__":
-  # GitHub Actionsでは1回実行されて終了するため、whileループは不要になります
   check_katamichi_go()
